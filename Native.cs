@@ -7,6 +7,9 @@ internal static class Native
     internal const int WhMouseLl = 14, WmXDown = 0x020B, WmXUp = 0x020C;
     internal const int WmKeyDown = 0x0100, WmSysKeyDown = 0x0104;
     internal const int VkF8 = 0x77, VkEscape = 0x1B, VkF12 = 0x7B;
+    internal const int WmInput = 0x00FF;
+    internal const uint RidInput = 0x10000003, RidevInputSink = 0x00000100, RidevRemove = 0x00000001;
+    internal const ushort RiMouseX1Down = 0x0040, RiMouseX1Up = 0x0080, RiMouseX2Down = 0x0100, RiMouseX2Up = 0x0200;
     internal const int VkControl = 0x11, VkShift = 0x10, VkLAlt = 0xA4;
     internal const int SmXVirtual = 76, SmYVirtual = 77, SmCxVirtual = 78, SmCyVirtual = 79;
     internal const uint InputMouse = 0, InputKeyboard = 1;
@@ -20,6 +23,9 @@ internal static class Native
     [StructLayout(LayoutKind.Explicit)] internal struct InputUnion { [FieldOffset(0)] public MouseInput Mouse; [FieldOffset(0)] public KeyboardInput Key; }
     [StructLayout(LayoutKind.Sequential)] internal struct MouseInput { public int Dx, Dy; public uint MouseData, Flags, Time; public nuint ExtraInfo; }
     [StructLayout(LayoutKind.Sequential)] internal struct KeyboardInput { public ushort Vk, Scan; public uint Flags, Time; public nuint ExtraInfo; }
+    [StructLayout(LayoutKind.Sequential)] internal struct RawInputDevice { public ushort UsagePage, Usage; public uint Flags; public nint Target; }
+    [StructLayout(LayoutKind.Sequential)] internal struct RawInputHeader { public uint Type, Size; public nint Device, WParam; }
+    [StructLayout(LayoutKind.Sequential)] internal struct RawMouse { public ushort Flags; public uint Buttons, RawButtons; public int LastX, LastY; public uint ExtraInformation; }
     internal delegate nint HookProc(int code, nuint wParam, nint lParam);
 
     [DllImport("user32.dll", SetLastError=true)] internal static extern nint SetWindowsHookEx(int id, HookProc proc, nint module, uint threadId);
@@ -31,6 +37,8 @@ internal static class Native
     [DllImport("user32.dll")] internal static extern int GetSystemMetrics(int index);
     [DllImport("user32.dll")] internal static extern short GetAsyncKeyState(int key);
     [DllImport("user32.dll")] internal static extern nint GetForegroundWindow();
+    [DllImport("user32.dll", SetLastError=true)] [return: MarshalAs(UnmanagedType.Bool)] internal static extern bool RegisterRawInputDevices([In] RawInputDevice[] devices, uint count, uint size);
+    [DllImport("user32.dll", SetLastError=true)] internal static extern uint GetRawInputData(nint rawInput, uint command, nint data, ref uint size, uint headerSize);
     [DllImport("winmm.dll")] internal static extern uint timeBeginPeriod(uint period);
     [DllImport("winmm.dll")] internal static extern uint timeEndPeriod(uint period);
     [DllImport("user32.dll", SetLastError=true)] [return: MarshalAs(UnmanagedType.Bool)] internal static extern bool RegisterHotKey(nint window, int id, uint modifiers, uint key);
@@ -48,4 +56,20 @@ internal static class Native
         GetSystemMetrics(SmXVirtual) + (int)Math.Round(37364d * (GetSystemMetrics(SmCxVirtual)-1) / 65535),
         GetSystemMetrics(SmYVirtual) + (int)Math.Round(48092d * (GetSystemMetrics(SmCyVirtual)-1) / 65535));
     internal static bool AltPhysicallyDown() => (GetAsyncKeyState(VkLAlt) & 0x8000) != 0;
+
+    internal static ushort ReadRawMouseButtons(nint rawInput)
+    {
+        uint size=0, headerSize=(uint)Marshal.SizeOf<RawInputHeader>();
+        if (GetRawInputData(rawInput, RidInput, 0, ref size, headerSize)!=0 || size<headerSize+(uint)Marshal.SizeOf<RawMouse>()) return 0;
+        nint memory=Marshal.AllocHGlobal((int)size);
+        try
+        {
+            if (GetRawInputData(rawInput, RidInput, memory, ref size, headerSize)==uint.MaxValue) return 0;
+            var header=Marshal.PtrToStructure<RawInputHeader>(memory);
+            if (header.Type!=0) return 0;
+            var mouse=Marshal.PtrToStructure<RawMouse>(memory+Marshal.SizeOf<RawInputHeader>());
+            return (ushort)(mouse.Buttons & 0xffff);
+        }
+        finally { Marshal.FreeHGlobal(memory); }
+    }
 }

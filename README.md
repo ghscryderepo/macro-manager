@@ -18,6 +18,7 @@ Configuration is stored in `%LOCALAPPDATA%\WindowsMacroManager\settings.json`. M
 - Auto click: while the side button is held, repeat the recorded G HUB sequence: Left Alt down, 1 ms delay, 17 left down/up pairs separated by 1 ms delays, Left Alt up. On release, stop and release synthetic inputs. If Left Alt was already down, the macro does not synthesize or release it. The click count and delays are configurable.
 - One macro activation runs at a time. If another assigned button is pressed while one is active, that press is ignored until the active macro finishes cleanup; it does not start later automatically. Either macro may be assigned to both buttons.
 - Native Mouse 4/5 events pass through by default. The optional suppression setting blocks assigned button events from reaching other applications.
+- The app listens for side buttons with both a low-level mouse hook and Raw Input. The **Last side button** line shows the detected Windows button and source. Raw Input can see some buttons consumed by mouse software; it cannot override a device configuration that sends no Windows side-button event.
 - A focus change stops auto click before the next click. The move macro checks focus before its click, and restores the original pointer location on release. Input already sent before a focus change cannot be recalled.
 - Save/Apply, disable, and exit cancel the active action. Synthetic held inputs are released in cleanup.
 

@@ -16,7 +16,7 @@ internal sealed class MainForm : Form
     private readonly MouseHook? hook;
     private readonly MacroEngine engine;
     private Settings settings;
-    private bool capturing, exiting;
+    private bool capturing, exiting, rawInputRegistered;
 
     internal MainForm()
     {
@@ -80,7 +80,12 @@ internal sealed class MainForm : Form
             };
             hook.Suppress=engine.ShouldSuppress;
         }
-        catch (Exception ex) { settings=settings with { Enabled=false }; engine.Disable(); status.Text=$"Mouse hook failed: {ex.Message}"; }
+        catch (Exception ex) { status.Text=$"Mouse hook failed: {ex.Message}"; }
+        rawInputRegistered=Native.RegisterRawInputDevices(
+            [new Native.RawInputDevice { UsagePage=1, Usage=2, Flags=Native.RidevInputSink, Target=Handle }],
+            1, (uint)Marshal.SizeOf<Native.RawInputDevice>());
+        if (!rawInputRegistered) status.Text += " | Raw Input unavailable";
+        if (hook is null && !rawInputRegistered) { engine.Disable(); status.Text="No mouse input source available."; }
         if (!Native.RegisterHotKey(Handle, HotkeyPanic, 0x0002|0x0004, Native.VkF12)) status.Text += " | Ctrl+Shift+F12 unavailable";
     }
 
@@ -131,6 +136,18 @@ internal sealed class MainForm : Form
     }
     protected override void WndProc(ref Message message)
     {
+        if (message.Msg==Native.WmInput)
+        {
+            var flags=Native.ReadRawMouseButtons(message.LParam);
+            if (flags!=0)
+            {
+                if (Native.GetCursorPos(out var point))
+                {
+                    DispatchRawButton(1, (flags & Native.RiMouseX1Down)!=0, (flags & Native.RiMouseX1Up)!=0, point);
+                    DispatchRawButton(2, (flags & Native.RiMouseX2Down)!=0, (flags & Native.RiMouseX2Up)!=0, point);
+                }
+            }
+        }
         if (message.Msg==WmHotkey)
         {
             if (message.WParam==(nint)HotkeyPanic) { Panic(); return; }
@@ -142,6 +159,13 @@ internal sealed class MainForm : Form
             }
         }
         base.WndProc(ref message);
+    }
+    private void DispatchRawButton(int button, bool down, bool up, Native.Point point)
+    {
+        if (!down && !up) return;
+        if (down) engine.HandleButton(button, true, point);
+        if (up) engine.HandleButton(button, false, point);
+        lastButton.Text=$"Last side button: XBUTTON{button} (Raw Input) → {(button==1 ? settings.Mouse4 : settings.Mouse5)}";
     }
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
     {
@@ -156,7 +180,14 @@ internal sealed class MainForm : Form
     private void Exit() { exiting=true; Close(); }
     protected override void Dispose(bool disposing)
     {
-        if (disposing) { EndCapture(); Native.UnregisterHotKey(Handle, HotkeyPanic); hook?.Dispose(); engine.Dispose(); tray.Visible=false; tray.Dispose(); }
+        if (disposing)
+        {
+            EndCapture(); Native.UnregisterHotKey(Handle, HotkeyPanic);
+            if (rawInputRegistered) Native.RegisterRawInputDevices(
+                [new Native.RawInputDevice { UsagePage=1, Usage=2, Flags=Native.RidevRemove, Target=0 }],
+                1, (uint)Marshal.SizeOf<Native.RawInputDevice>());
+            hook?.Dispose(); engine.Dispose(); tray.Visible=false; tray.Dispose();
+        }
         base.Dispose(disposing);
     }
 }
