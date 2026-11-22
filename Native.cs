@@ -11,6 +11,7 @@ internal static class Native
     internal const uint RidInput = 0x10000003, RidevInputSink = 0x00000100, RidevRemove = 0x00000001;
     internal const ushort RiMouseX1Down = 0x0040, RiMouseX1Up = 0x0080, RiMouseX2Down = 0x0100, RiMouseX2Up = 0x0200;
     internal const int VkControl = 0x11, VkShift = 0x10, VkLAlt = 0xA4;
+    internal const int VkF1 = 0x70;
     internal const int SmXVirtual = 76, SmYVirtual = 77, SmCxVirtual = 78, SmCyVirtual = 79;
     internal const uint InputMouse = 0, InputKeyboard = 1;
     internal const uint LeftDown = 0x0002, LeftUp = 0x0004, KeyUp = 0x0002;

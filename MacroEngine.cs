@@ -7,6 +7,9 @@ internal sealed class MacroEngine : IDisposable
     private int activeButton;
     private CancellationTokenSource? cancellation;
     private Task? running;
+    private CancellationTokenSource? keyboardCancellation;
+    private Task? keyboardRunning;
+    private readonly bool[] pressed=new bool[3];
     private bool disposed;
     internal event Action<string>? Status;
     internal MacroEngine(Settings initial) => settings=initial;
@@ -19,12 +22,17 @@ internal sealed class MacroEngine : IDisposable
             if (disposed) return;
             if (!down)
             {
-                if (activeButton==button) StopLocked();
+                pressed[button]=false;
+                if (activeButton==button) StopMouseLocked();
                 return;
             }
-            if (!settings.Enabled || activeButton!=0) return;
+            if (pressed[button]) return; // Hook and Raw Input can report the same press.
+            pressed[button]=true;
+            if (!settings.Enabled) return;
             var kind=button==1 ? settings.Mouse4 : settings.Mouse5;
             if (kind==MacroKind.None) return;
+            if (kind==MacroKind.FunctionKeyCycle) { ToggleKeyboardLocked(); return; }
+            if (activeButton!=0) return;
             activeButton=button;
             cancellation=new CancellationTokenSource();
             var source=cancellation;
@@ -53,6 +61,81 @@ internal sealed class MacroEngine : IDisposable
                     source.Dispose();
                 }
             });
+        }
+    }
+
+    private void ToggleKeyboardLocked()
+    {
+        if (keyboardCancellation is not null)
+        {
+            keyboardCancellation.Cancel();
+            Report("F-key cycle stopping.");
+            return;
+        }
+        var source=new CancellationTokenSource();
+        keyboardCancellation=source;
+        var current=settings;
+        var foreground=Native.GetForegroundWindow();
+        keyboardRunning=Task.Run(() =>
+        {
+            try { RunKeyboardCycle(current, foreground, source.Token); }
+            catch (OperationCanceledException) { }
+            catch (Exception ex) { Report($"F-key cycle error: {ex.Message}"); }
+            finally
+            {
+                lock(sync)
+                {
+                    if (ReferenceEquals(keyboardCancellation, source)) keyboardCancellation=null;
+                }
+                source.Dispose();
+            }
+        });
+    }
+
+    private void RunKeyboardCycle(Settings config, nint foreground, CancellationToken token)
+    {
+        ushort heldKey=0;
+        bool timerRaised=Native.timeBeginPeriod(1)==0;
+        long completedCycles=0;
+        long lastStatus=Environment.TickCount64;
+        string stopReason="toggle, disable, or exit";
+        try
+        {
+            Report($"F-key cycle running: F1–F{config.LastFunctionKey}.");
+            while (true)
+            {
+                for (int number=1; number<=config.LastFunctionKey; number++)
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (Native.GetForegroundWindow()!=foreground)
+                    {
+                        stopReason="focus changed";
+                        return;
+                    }
+                    ushort key=(ushort)(Native.VkF1+number-1);
+                    // Avoid releasing a function key held by the user.
+                    if ((Native.GetAsyncKeyState(key) & 0x8000)==0)
+                    {
+                        Native.SendKey(key, false); heldKey=key;
+                        Wait(config.FunctionKeyHoldMs, token);
+                        Native.SendKey(key, true); heldKey=0;
+                    }
+                    Wait(config.FunctionKeyIntervalMs, token);
+                }
+                completedCycles++;
+                if (Environment.TickCount64-lastStatus>=1000)
+                {
+                    Report($"F-key cycle running: {completedCycles} passes through F1–F{config.LastFunctionKey}.");
+                    lastStatus=Environment.TickCount64;
+                }
+            }
+        }
+        finally
+        {
+            if (heldKey!=0) try { Native.SendKey(heldKey, true); }
+            catch (Exception ex) { Report($"F-key release failed: {ex.Message}"); }
+            if (timerRaised) Native.timeEndPeriod(1);
+            Report($"F-key cycle stopped ({stopReason}) after {completedCycles} passes.");
         }
     }
 
@@ -126,24 +209,27 @@ internal sealed class MacroEngine : IDisposable
     internal void Apply(Settings updated)
     {
         updated.Validate();
-        lock(sync) { StopLocked(); settings=updated; }
+        lock(sync) { StopAllLocked(); settings=updated; }
         Report(updated.Enabled ? "Enabled" : "Disabled");
     }
     internal void Disable()
     {
-        lock(sync) { StopLocked(); settings=settings with { Enabled=false }; }
+        lock(sync) { StopAllLocked(); settings=settings with { Enabled=false }; }
         Report("Disabled (panic)");
     }
-    private void StopLocked()
+    private void StopMouseLocked() => cancellation?.Cancel();
+    private void StopAllLocked()
     {
-        cancellation?.Cancel();
+        StopMouseLocked();
+        keyboardCancellation?.Cancel();
         // The task owns and disposes its token source after releasing synthetic input.
     }
     private void Report(string message) => Status?.Invoke(message);
     public void Dispose()
     {
-        Task? task;
-        lock(sync) { disposed=true; StopLocked(); task=running; }
-        try { task?.Wait(TimeSpan.FromSeconds(2)); } catch (AggregateException) { }
+        Task? task, keyboardTask;
+        lock(sync) { disposed=true; StopAllLocked(); task=running; keyboardTask=keyboardRunning; }
+        try { Task.WaitAll([task ?? Task.CompletedTask, keyboardTask ?? Task.CompletedTask], TimeSpan.FromSeconds(2)); }
+        catch (AggregateException) { }
     }
 }
