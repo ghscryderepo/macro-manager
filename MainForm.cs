@@ -43,8 +43,19 @@ internal sealed class MainForm : Form
         Add(panel, 9, "Suppress Mouse 4/5", suppress); suppress.Checked=settings.SuppressButtons;
         var buttons=new FlowLayoutPanel { AutoSize=true, Dock=DockStyle.Fill };
         var save=new Button { Text="Save / Apply", AutoSize=true }; save.Click+=(_, _) => Save();
+        var prototype=new Button { Text="Use PowerShell setup", AutoSize=true };
+        prototype.Click+=(_, _) =>
+        {
+            mouse4.SelectedIndex=(int)MacroKind.AltAutoClick;
+            mouse5.SelectedIndex=(int)MacroKind.MoveClickRestore;
+            var target=Native.LogitechTarget();
+            x.Value=target.X; y.Value=target.Y;
+            targetHint.Text="Default target converted from Logitech coordinates";
+            enabled.Checked=true;
+            Save();
+        };
         var panic=new Button { Text="Panic Disable", AutoSize=true }; panic.Click+=(_, _) => Panic();
-        buttons.Controls.Add(save); buttons.Controls.Add(panic); panel.Controls.Add(buttons, 0, 10); panel.SetColumnSpan(buttons, 2);
+        buttons.Controls.Add(save); buttons.Controls.Add(prototype); buttons.Controls.Add(panic); panel.Controls.Add(buttons, 0, 10); panel.SetColumnSpan(buttons, 2);
         status.AutoSize=true; status.Text=warning ?? (settings.Enabled ? "Enabled" : "Disabled");
         panel.Controls.Add(status, 0, 11); panel.SetColumnSpan(status, 2);
         lastButton.AutoSize=true; lastButton.Text="Last side button: none";

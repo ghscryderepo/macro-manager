@@ -61,12 +61,10 @@ internal sealed class MacroEngine : IDisposable
         bool moved=false, leftDown=false;
         try
         {
-            token.ThrowIfCancellationRequested();
             if (Native.GetForegroundWindow()!=foreground) return;
             var target=config.TargetX.HasValue ? new Native.Point(config.TargetX.Value, config.TargetY!.Value) : Native.LogitechTarget();
             if (!Native.SetCursorPos(target.X, target.Y)) throw new InvalidOperationException("Could not move cursor.");
             moved=true;
-            token.ThrowIfCancellationRequested();
             if (Native.GetForegroundWindow()!=foreground) return;
             Native.SendMouse(Native.LeftDown); leftDown=true;
             Native.SendMouse(Native.LeftUp); leftDown=false;

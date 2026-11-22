@@ -10,7 +10,7 @@ Small Windows Forms utility for two mouse button macros. Requires Windows 10/11 
 4. Set the two auto click delays (1–10000 ms), then click **Save / Apply**. The initial setting is 1 ms for each delay; Windows scheduling does not guarantee exact 1 ms intervals.
 5. **Panic Disable** or global **Ctrl+Shift+F12** stops the active macro and disables the app. Use the tray menu to enable/disable, open, or exit. Closing the window hides it in the tray.
 
-Configuration is stored in `%LOCALAPPDATA%\WindowsMacroManager\settings.json`. Missing or invalid JSON loads defaults with a warning. The default bindings are Mouse 4 for move/click/restore and Mouse 5 for Alt auto click. The default target is `(37364, 48092)` in Logitech's 0–65535 coordinates, converted to pixels across the Windows virtual desktop. You can capture a new target in physical desktop pixels.
+Configuration is stored in `%LOCALAPPDATA%\WindowsMacroManager\settings.json`. Missing or invalid JSON loads defaults with a warning. The default bindings are XBUTTON2 for move/click/restore, matching `legacy/mouse-position.ps1`, and XBUTTON1 for Alt auto click. In an existing installation, click **Use PowerShell setup** to restore those bindings, the original target, and enable the app. The default target is `(37364, 48092)` in Logitech's 0–65535 coordinates, converted to pixels across the Windows virtual desktop. You can capture a new target in physical desktop pixels.
 
 ## Behavior
 

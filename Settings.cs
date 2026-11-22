@@ -7,8 +7,8 @@ internal enum MacroKind { None, MoveClickRestore, AltAutoClick }
 internal sealed record Settings
 {
     public bool Enabled { get; init; } = true;
-    public MacroKind Mouse4 { get; init; } = MacroKind.MoveClickRestore;
-    public MacroKind Mouse5 { get; init; } = MacroKind.AltAutoClick;
+    public MacroKind Mouse4 { get; init; } = MacroKind.AltAutoClick;
+    public MacroKind Mouse5 { get; init; } = MacroKind.MoveClickRestore;
     public int? TargetX { get; init; }
     public int? TargetY { get; init; }
     public int DownUpMs { get; init; } = 1;
