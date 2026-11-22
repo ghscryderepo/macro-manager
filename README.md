@@ -5,7 +5,7 @@ Small Windows Forms utility for two mouse button macros. Requires Windows 10/11 
 ## Use
 
 1. Run `WindowsMacroManager.exe`.
-2. Assign `None`, `Move + Click + Restore`, or `Alt + AutoClick` independently to Mouse 4 and Mouse 5.
+2. Assign `None`, `Move + Click + Restore`, or `Alt + AutoClick` independently to Windows `XBUTTON1` and `XBUTTON2`. The window labels these Mouse 4 and Mouse 5, but mouse software may name the physical buttons in the opposite order. Press a side button and check **Last side button** to see which Windows event it sends.
 3. For the move macro, enter desktop pixel coordinates or click **Capture position**, move the pointer, and press **F8**. Press **Esc** in the window or click Cancel to abandon capture.
 4. Set the two auto click delays (1–10000 ms), then click **Save / Apply**. The initial setting is 1 ms for each delay; Windows scheduling does not guarantee exact 1 ms intervals.
 5. **Panic Disable** or global **Ctrl+Shift+F12** stops the active macro and disables the app. Use the tray menu to enable/disable, open, or exit. Closing the window hides it in the tray.

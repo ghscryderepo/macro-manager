@@ -10,7 +10,7 @@ internal sealed class MainForm : Form
     private readonly ComboBox mouse4=new(), mouse5=new();
     private readonly NumericUpDown x=new(), y=new(), downUp=new(), between=new();
     private readonly CheckBox enabled=new(), suppress=new();
-    private readonly Label status=new(), targetHint=new();
+    private readonly Label status=new(), targetHint=new(), lastButton=new();
     private readonly Button capture=new();
     private readonly NotifyIcon tray=new();
     private readonly MouseHook? hook;
@@ -20,7 +20,7 @@ internal sealed class MainForm : Form
 
     internal MainForm()
     {
-        Text="Windows Macro Manager"; Width=440; Height=420; MinimumSize=new Size(420, 390);
+        Text="Windows Macro Manager"; Width=460; Height=450; MinimumSize=new Size(440, 410);
         StartPosition=FormStartPosition.CenterScreen; KeyPreview=true;
         settings=SettingsStore.Load(out var warning);
         engine=new MacroEngine(settings);
@@ -30,7 +30,7 @@ internal sealed class MainForm : Form
         Controls.Add(panel);
         Add(panel, 0, "Enabled", enabled); enabled.Checked=settings.Enabled;
         ConfigureCombo(mouse4, settings.Mouse4); ConfigureCombo(mouse5, settings.Mouse5);
-        Add(panel, 1, "Mouse 4", mouse4); Add(panel, 2, "Mouse 5", mouse5);
+        Add(panel, 1, "Mouse 4 / XBUTTON1", mouse4); Add(panel, 2, "Mouse 5 / XBUTTON2", mouse5);
         ConfigureCoordinate(x, settings.TargetX ?? Native.LogitechTarget().X);
         ConfigureCoordinate(y, settings.TargetY ?? Native.LogitechTarget().Y);
         Add(panel, 3, "Target X (pixels)", x); Add(panel, 4, "Target Y (pixels)", y);
@@ -47,14 +47,26 @@ internal sealed class MainForm : Form
         buttons.Controls.Add(save); buttons.Controls.Add(panic); panel.Controls.Add(buttons, 0, 10); panel.SetColumnSpan(buttons, 2);
         status.AutoSize=true; status.Text=warning ?? (settings.Enabled ? "Enabled" : "Disabled");
         panel.Controls.Add(status, 0, 11); panel.SetColumnSpan(status, 2);
-        panel.RowCount=12;
+        lastButton.AutoSize=true; lastButton.Text="Last side button: none";
+        panel.Controls.Add(lastButton, 0, 12); panel.SetColumnSpan(lastButton, 2);
+        panel.RowCount=13;
         var menu=new ContextMenuStrip();
         menu.Items.Add("Open", null, (_, _) => { Show(); WindowState=FormWindowState.Normal; Activate(); });
         menu.Items.Add("Enable / Disable", null, (_, _) => { enabled.Checked=!settings.Enabled; Save(); });
         menu.Items.Add("Exit", null, (_, _) => Exit());
         tray.Icon=SystemIcons.Application; tray.Text="Windows Macro Manager"; tray.ContextMenuStrip=menu; tray.Visible=true;
         tray.DoubleClick+=(_, _) => { Show(); WindowState=FormWindowState.Normal; Activate(); };
-        try { hook=new MouseHook(); hook.Button+=engine.HandleButton; hook.Suppress=engine.ShouldSuppress; }
+        try
+        {
+            hook=new MouseHook();
+            hook.Button+=engine.HandleButton;
+            hook.Button+=(button, down, _) =>
+            {
+                if (down && IsHandleCreated)
+                    BeginInvoke(() => lastButton.Text=$"Last side button: XBUTTON{button} → {(button==1 ? settings.Mouse4 : settings.Mouse5)}");
+            };
+            hook.Suppress=engine.ShouldSuppress;
+        }
         catch (Exception ex) { settings=settings with { Enabled=false }; engine.Disable(); status.Text=$"Mouse hook failed: {ex.Message}"; }
         if (!Native.RegisterHotKey(Handle, HotkeyPanic, 0x0002|0x0004, Native.VkF12)) status.Text += " | Ctrl+Shift+F12 unavailable";
     }
