@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace WindowsMacroManager;
 
-internal enum MacroKind { None, MoveClickRestore, AltAutoClick, FunctionKeyCycle }
+internal enum MacroKind { None, MoveClickRestore, AltAutoClick }
 
 internal sealed record Settings
 {
@@ -14,9 +14,6 @@ internal sealed record Settings
     public int DownUpMs { get; init; } = 1;
     public int BetweenClicksMs { get; init; } = 1;
     public int ClicksPerCycle { get; init; } = 17;
-    public int LastFunctionKey { get; init; } = 12;
-    public int FunctionKeyHoldMs { get; init; } = 10;
-    public int FunctionKeyIntervalMs { get; init; } = 250;
     public bool SuppressButtons { get; init; }
 
     public Settings Validate()
@@ -24,9 +21,6 @@ internal sealed record Settings
         if (!Enum.IsDefined(Mouse4) || !Enum.IsDefined(Mouse5)) throw new InvalidDataException("Invalid button assignment.");
         if (DownUpMs is < 1 or > 10000 || BetweenClicksMs is < 1 or > 10000) throw new InvalidDataException("Delays must be between 1 and 10000 ms.");
         if (ClicksPerCycle is < 1 or > 100) throw new InvalidDataException("Clicks per cycle must be between 1 and 100.");
-        if (LastFunctionKey is < 1 or > 24) throw new InvalidDataException("Last function key must be F1–F24.");
-        if (FunctionKeyHoldMs is < 1 or > 1000) throw new InvalidDataException("Function key hold must be between 1 and 1000 ms.");
-        if (FunctionKeyIntervalMs is < 1 or > 60000) throw new InvalidDataException("Function key interval must be between 1 and 60000 ms.");
         if (TargetX.HasValue != TargetY.HasValue) throw new InvalidDataException("Target coordinates are incomplete.");
         return this;
     }

@@ -7,8 +7,8 @@ namespace WindowsMacroManager;
 internal sealed class MainForm : Form
 {
     private const int HotkeyCapture=1, HotkeyPanic=2, WmHotkey=0x0312;
-    private readonly ComboBox mouse4=new(), mouse5=new(), lastKey=new();
-    private readonly NumericUpDown x=new(), y=new(), downUp=new(), between=new(), clicks=new(), keyHold=new(), keyInterval=new();
+    private readonly ComboBox mouse4=new(), mouse5=new();
+    private readonly NumericUpDown x=new(), y=new(), downUp=new(), between=new(), clicks=new();
     private readonly CheckBox enabled=new(), suppress=new();
     private readonly Label status=new(), targetHint=new(), lastButton=new();
     private readonly Button capture=new();
@@ -20,7 +20,7 @@ internal sealed class MainForm : Form
 
     internal MainForm()
     {
-        Text="Windows Macro Manager"; Width=520; Height=560; MinimumSize=new Size(480, 460);
+        Text="Windows Macro Manager"; Width=480; Height=480; MinimumSize=new Size(460, 440);
         Icon=System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath) ?? SystemIcons.Application;
         StartPosition=FormStartPosition.CenterScreen; KeyPreview=true;
         settings=SettingsStore.Load(out var warning);
@@ -44,14 +44,6 @@ internal sealed class MainForm : Form
         Add(panel, 7, "Down → up (ms)", downUp); Add(panel, 8, "Between clicks (ms)", between);
         Add(panel, 9, "Clicks per Alt cycle", clicks);
         Add(panel, 10, "Suppress Mouse 4/5", suppress); suppress.Checked=settings.SuppressButtons;
-        lastKey.DropDownStyle=ComboBoxStyle.DropDownList;
-        for (int number=1; number<=24; number++) lastKey.Items.Add($"F{number}");
-        lastKey.SelectedIndex=settings.LastFunctionKey-1;
-        keyHold.Minimum=1; keyHold.Maximum=1000; keyHold.Value=settings.FunctionKeyHoldMs;
-        keyInterval.Minimum=1; keyInterval.Maximum=60000; keyInterval.Value=settings.FunctionKeyIntervalMs;
-        Add(panel, 11, "Cycle F1 through", lastKey);
-        Add(panel, 12, "Key hold (ms)", keyHold);
-        Add(panel, 13, "Between keys (ms)", keyInterval);
         var buttons=new FlowLayoutPanel { AutoSize=true, Dock=DockStyle.Fill };
         var save=new Button { Text="Save / Apply", AutoSize=true }; save.Click+=(_, _) => Save();
         var prototype=new Button { Text="Use PowerShell setup", AutoSize=true };
@@ -68,12 +60,12 @@ internal sealed class MainForm : Form
         var panic=new Button { Text="Panic Disable", AutoSize=true }; panic.Click+=(_, _) => Panic();
         var about=new Button { Text="About", AutoSize=true }; about.Click+=(_, _) => ShowCredits();
         buttons.Controls.Add(save); buttons.Controls.Add(prototype); buttons.Controls.Add(panic); buttons.Controls.Add(about);
-        panel.Controls.Add(buttons, 0, 14); panel.SetColumnSpan(buttons, 2);
+        panel.Controls.Add(buttons, 0, 11); panel.SetColumnSpan(buttons, 2);
         status.AutoSize=true; status.Text=warning ?? (settings.Enabled ? "Enabled" : "Disabled");
-        panel.Controls.Add(status, 0, 15); panel.SetColumnSpan(status, 2);
+        panel.Controls.Add(status, 0, 12); panel.SetColumnSpan(status, 2);
         lastButton.AutoSize=true; lastButton.Text="Last side button: none";
-        panel.Controls.Add(lastButton, 0, 16); panel.SetColumnSpan(lastButton, 2);
-        panel.RowCount=17;
+        panel.Controls.Add(lastButton, 0, 13); panel.SetColumnSpan(lastButton, 2);
+        panel.RowCount=14;
         var menu=new ContextMenuStrip();
         menu.Items.Add("Open", null, (_, _) => { Show(); WindowState=FormWindowState.Normal; Activate(); });
         menu.Items.Add("Enable / Disable", null, (_, _) => { enabled.Checked=!settings.Enabled; Save(); });
@@ -109,7 +101,7 @@ internal sealed class MainForm : Form
     private static void ConfigureCombo(ComboBox combo, MacroKind value)
     {
         combo.DropDownStyle=ComboBoxStyle.DropDownList;
-        combo.Items.AddRange(["None", "Move + Click + Restore", "Alt + AutoClick", "F-key cycle (toggle)"]);
+        combo.Items.AddRange(["None", "Move + Click + Restore", "Alt + AutoClick"]);
         combo.SelectedIndex=(int)value;
     }
     private static void ConfigureCoordinate(NumericUpDown box, int value)
@@ -123,8 +115,7 @@ internal sealed class MainForm : Form
         {
             var next=new Settings { Enabled=enabled.Checked, Mouse4=(MacroKind)mouse4.SelectedIndex, Mouse5=(MacroKind)mouse5.SelectedIndex,
                 TargetX=(int)x.Value, TargetY=(int)y.Value, DownUpMs=(int)downUp.Value, BetweenClicksMs=(int)between.Value,
-                ClicksPerCycle=(int)clicks.Value, SuppressButtons=suppress.Checked,
-                LastFunctionKey=lastKey.SelectedIndex+1, FunctionKeyHoldMs=(int)keyHold.Value, FunctionKeyIntervalMs=(int)keyInterval.Value };
+                ClicksPerCycle=(int)clicks.Value, SuppressButtons=suppress.Checked };
             next.Validate(); SettingsStore.Save(next); settings=next; engine.Apply(next);
             status.Text="Settings saved. " + (next.Enabled ? "Enabled" : "Disabled");
         }

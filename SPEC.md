@@ -77,14 +77,6 @@ A second G HUB macro shown in a screenshot is named `ALTCELKA`: it holds Alt whi
 - Kernel drivers or bypasses for game anti-cheat.
 - Automated background updates.
 
-## Post-MVP addition — Function-key cycle
-
-- A third assignable macro, `F-key cycle (toggle)`, sends F1, F2, and so on through a user-selected final key (F1–F24), then repeats from F1.
-- The first press of the assigned side button starts the cycle; the next press stops it. Releasing the side button does not stop this macro.
-- GUI fields set the final F-key, key hold duration, and interval between keys. The interval also applies between the last key and F1 of the next cycle.
-- Stop on disable, configuration change, focus change, or exit, and release any synthetic held key during cleanup.
-- The keyboard cycle may run alongside one held mouse macro. Its toggle state is independent of button release.
-
 ## Acceptance criteria
 1. GUI lets the user assign either macro or None to Mouse 4/Mouse 5 without code changes.
 2. Move macro clicks once on press and restores saved cursor position on release.
