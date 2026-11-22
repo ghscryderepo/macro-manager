@@ -1,5 +1,7 @@
 # Windows Macro Manager
 
+The application icon uses the Lineage II Wings of Destiny Circlet (Hero Tiara) item icon, sourced from [ElmoreLab's icon archive](https://resources.elmorelab.com/images/accessory_hero_cap_i00.jpg). Credits are available from **About** in the window or tray menu.
+
 Small Windows Forms utility for two mouse button macros. Requires Windows 10/11 x64 to run. No PowerShell, Logitech G HUB, or AutoHotkey runtime is used.
 
 ## Use

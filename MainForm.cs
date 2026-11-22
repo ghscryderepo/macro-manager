@@ -21,6 +21,7 @@ internal sealed class MainForm : Form
     internal MainForm()
     {
         Text="Windows Macro Manager"; Width=480; Height=480; MinimumSize=new Size(460, 440);
+        Icon=System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath) ?? SystemIcons.Application;
         StartPosition=FormStartPosition.CenterScreen; KeyPreview=true;
         settings=SettingsStore.Load(out var warning);
         engine=new MacroEngine(settings);
@@ -57,7 +58,9 @@ internal sealed class MainForm : Form
             Save();
         };
         var panic=new Button { Text="Panic Disable", AutoSize=true }; panic.Click+=(_, _) => Panic();
-        buttons.Controls.Add(save); buttons.Controls.Add(prototype); buttons.Controls.Add(panic); panel.Controls.Add(buttons, 0, 11); panel.SetColumnSpan(buttons, 2);
+        var about=new Button { Text="About", AutoSize=true }; about.Click+=(_, _) => ShowCredits();
+        buttons.Controls.Add(save); buttons.Controls.Add(prototype); buttons.Controls.Add(panic); buttons.Controls.Add(about);
+        panel.Controls.Add(buttons, 0, 11); panel.SetColumnSpan(buttons, 2);
         status.AutoSize=true; status.Text=warning ?? (settings.Enabled ? "Enabled" : "Disabled");
         panel.Controls.Add(status, 0, 12); panel.SetColumnSpan(status, 2);
         lastButton.AutoSize=true; lastButton.Text="Last side button: none";
@@ -66,8 +69,9 @@ internal sealed class MainForm : Form
         var menu=new ContextMenuStrip();
         menu.Items.Add("Open", null, (_, _) => { Show(); WindowState=FormWindowState.Normal; Activate(); });
         menu.Items.Add("Enable / Disable", null, (_, _) => { enabled.Checked=!settings.Enabled; Save(); });
+        menu.Items.Add("About", null, (_, _) => ShowCredits());
         menu.Items.Add("Exit", null, (_, _) => Exit());
-        tray.Icon=SystemIcons.Application; tray.Text="Windows Macro Manager"; tray.ContextMenuStrip=menu; tray.Visible=true;
+        tray.Icon=Icon; tray.Text="Windows Macro Manager"; tray.ContextMenuStrip=menu; tray.Visible=true;
         tray.DoubleClick+=(_, _) => { Show(); WindowState=FormWindowState.Normal; Activate(); };
         try
         {
@@ -178,6 +182,9 @@ internal sealed class MainForm : Form
         base.OnFormClosing(e);
     }
     private void Exit() { exiting=true; Close(); }
+    private void ShowCredits() => MessageBox.Show(this,
+        "speical thanks for your mom and volodnine aka garniyhuy aka boolean",
+        "Credits", MessageBoxButtons.OK, MessageBoxIcon.Information);
     protected override void Dispose(bool disposing)
     {
         if (disposing)
