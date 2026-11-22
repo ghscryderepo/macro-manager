@@ -2,6 +2,8 @@ name: Build Windows x64
 
 on:
   push:
+    tags:
+      - 'v*'
   pull_request:
   workflow_dispatch:
 
@@ -9,7 +11,7 @@ jobs:
   build:
     runs-on: windows-latest
     permissions:
-      contents: read
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -27,3 +29,9 @@ jobs:
           name: WindowsMacroManager-win-x64
           path: publish/WindowsMacroManager.exe
           if-no-files-found: error
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: publish/WindowsMacroManager.exe
+          fail_on_unmatched_files: true

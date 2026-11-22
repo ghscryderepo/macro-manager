@@ -23,7 +23,7 @@ Configuration is stored in `%LOCALAPPDATA%\WindowsMacroManager\settings.json`. M
 
 ## Build and publish
 
-GitHub Actions builds the Windows x64 executable on every push and pull request, and can also be started from the **Actions** tab with **Run workflow**. Download `WindowsMacroManager-win-x64` from the run's **Artifacts** section. The repository must be pushed to GitHub for this workflow to run.
+GitHub Actions builds the Windows x64 executable on every push and pull request, and can also be started from the **Actions** tab with **Run workflow**. Tagged versions (`v*`) also publish `WindowsMacroManager.exe` to GitHub Releases for direct download. The repository must be pushed to GitHub for this workflow to run.
 
 Install the .NET 8 SDK (or newer) on Windows. From this directory in PowerShell:
 
