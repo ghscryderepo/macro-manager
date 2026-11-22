@@ -13,12 +13,14 @@ internal sealed record Settings
     public int? TargetY { get; init; }
     public int DownUpMs { get; init; } = 1;
     public int BetweenClicksMs { get; init; } = 1;
+    public int ClicksPerCycle { get; init; } = 17;
     public bool SuppressButtons { get; init; }
 
     public Settings Validate()
     {
         if (!Enum.IsDefined(Mouse4) || !Enum.IsDefined(Mouse5)) throw new InvalidDataException("Invalid button assignment.");
         if (DownUpMs is < 1 or > 10000 || BetweenClicksMs is < 1 or > 10000) throw new InvalidDataException("Delays must be between 1 and 10000 ms.");
+        if (ClicksPerCycle is < 1 or > 100) throw new InvalidDataException("Clicks per cycle must be between 1 and 100.");
         if (TargetX.HasValue != TargetY.HasValue) throw new InvalidDataException("Target coordinates are incomplete.");
         return this;
     }

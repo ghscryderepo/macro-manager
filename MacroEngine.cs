@@ -36,7 +36,7 @@ internal sealed class MacroEngine : IDisposable
                 try
                 {
                     if (kind==MacroKind.MoveClickRestore) await MoveClickRestore(current, point, foreground, token);
-                    else await AutoClick(current, foreground, token);
+                    else AutoClick(current, foreground, token);
                 }
                 catch (OperationCanceledException) { }
                 catch (Exception ex) { Report($"Macro error: {ex.Message}"); }
@@ -77,29 +77,50 @@ internal sealed class MacroEngine : IDisposable
         }
     }
 
-    private async Task AutoClick(Settings config, nint foreground, CancellationToken token)
+    private void AutoClick(Settings config, nint foreground, CancellationToken token)
     {
         bool syntheticAlt=false, leftDown=false;
+        bool timerRaised=Native.timeBeginPeriod(1)==0;
+        int completedClicks=0;
+        string stopReason="button released or macro disabled";
         try
         {
-            token.ThrowIfCancellationRequested();
-            if (Native.GetForegroundWindow()!=foreground) return;
-            if (!Native.AltPhysicallyDown()) { Native.SendKey(Native.VkLAlt, false); syntheticAlt=true; }
+            Report("Alt + AutoClick started; no click sent yet.");
             while (true)
             {
                 token.ThrowIfCancellationRequested();
-                if (Native.GetForegroundWindow()!=foreground) { Report("Focus changed; macro stopped."); return; }
-                Native.SendMouse(Native.LeftDown); leftDown=true;
-                await Task.Delay(config.DownUpMs, token);
-                Native.SendMouse(Native.LeftUp); leftDown=false;
-                await Task.Delay(config.BetweenClicksMs, token);
+                if (Native.GetForegroundWindow()!=foreground) { stopReason="focus changed"; return; }
+                // G HUB's recorded sequence presses Alt once, clicks 17 times,
+                // then releases Alt. Repeat While Holding repeats that sequence.
+                if (!Native.AltPhysicallyDown()) { Native.SendKey(Native.VkLAlt, false); syntheticAlt=true; }
+                Wait(config.BetweenClicksMs, token);
+                for (int click=0; click<config.ClicksPerCycle; click++)
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (Native.GetForegroundWindow()!=foreground) { stopReason="focus changed"; return; }
+                    Native.SendMouse(Native.LeftDown); leftDown=true;
+                    Wait(config.DownUpMs, token);
+                    Native.SendMouse(Native.LeftUp); leftDown=false;
+                    completedClicks++;
+                    if (completedClicks==1) Report("Alt + AutoClick sent its first click.");
+                    Wait(config.BetweenClicksMs, token);
+                }
+                if (syntheticAlt) { Native.SendKey(Native.VkLAlt, true); syntheticAlt=false; }
+                Report($"Alt + AutoClick running: {completedClicks} clicks sent.");
             }
         }
         finally
         {
             if (leftDown) try { Native.SendMouse(Native.LeftUp); } catch (Exception ex) { Report($"Left button release failed: {ex.Message}"); }
             if (syntheticAlt) try { Native.SendKey(Native.VkLAlt, true); } catch (Exception ex) { Report($"Alt release failed: {ex.Message}"); }
+            if (timerRaised) Native.timeEndPeriod(1);
+            Report($"Alt + AutoClick stopped ({stopReason}): {completedClicks} clicks sent.");
         }
+    }
+
+    private static void Wait(int milliseconds, CancellationToken token)
+    {
+        if (token.WaitHandle.WaitOne(milliseconds)) token.ThrowIfCancellationRequested();
     }
 
     internal void Apply(Settings updated)

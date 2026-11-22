@@ -8,7 +8,7 @@ internal sealed class MainForm : Form
 {
     private const int HotkeyCapture=1, HotkeyPanic=2, WmHotkey=0x0312;
     private readonly ComboBox mouse4=new(), mouse5=new();
-    private readonly NumericUpDown x=new(), y=new(), downUp=new(), between=new();
+    private readonly NumericUpDown x=new(), y=new(), downUp=new(), between=new(), clicks=new();
     private readonly CheckBox enabled=new(), suppress=new();
     private readonly Label status=new(), targetHint=new(), lastButton=new();
     private readonly Button capture=new();
@@ -20,7 +20,7 @@ internal sealed class MainForm : Form
 
     internal MainForm()
     {
-        Text="Windows Macro Manager"; Width=460; Height=450; MinimumSize=new Size(440, 410);
+        Text="Windows Macro Manager"; Width=480; Height=480; MinimumSize=new Size(460, 440);
         StartPosition=FormStartPosition.CenterScreen; KeyPreview=true;
         settings=SettingsStore.Load(out var warning);
         engine=new MacroEngine(settings);
@@ -39,8 +39,10 @@ internal sealed class MainForm : Form
         capture.Text="Capture position (F8)"; capture.AutoSize=true; capture.Click+=(_, _) => ToggleCapture();
         panel.Controls.Add(capture, 0, 6); panel.SetColumnSpan(capture, 2);
         ConfigureDelay(downUp, settings.DownUpMs); ConfigureDelay(between, settings.BetweenClicksMs);
+        clicks.Minimum=1; clicks.Maximum=100; clicks.Value=settings.ClicksPerCycle;
         Add(panel, 7, "Down → up (ms)", downUp); Add(panel, 8, "Between clicks (ms)", between);
-        Add(panel, 9, "Suppress Mouse 4/5", suppress); suppress.Checked=settings.SuppressButtons;
+        Add(panel, 9, "Clicks per Alt cycle", clicks);
+        Add(panel, 10, "Suppress Mouse 4/5", suppress); suppress.Checked=settings.SuppressButtons;
         var buttons=new FlowLayoutPanel { AutoSize=true, Dock=DockStyle.Fill };
         var save=new Button { Text="Save / Apply", AutoSize=true }; save.Click+=(_, _) => Save();
         var prototype=new Button { Text="Use PowerShell setup", AutoSize=true };
@@ -55,12 +57,12 @@ internal sealed class MainForm : Form
             Save();
         };
         var panic=new Button { Text="Panic Disable", AutoSize=true }; panic.Click+=(_, _) => Panic();
-        buttons.Controls.Add(save); buttons.Controls.Add(prototype); buttons.Controls.Add(panic); panel.Controls.Add(buttons, 0, 10); panel.SetColumnSpan(buttons, 2);
+        buttons.Controls.Add(save); buttons.Controls.Add(prototype); buttons.Controls.Add(panic); panel.Controls.Add(buttons, 0, 11); panel.SetColumnSpan(buttons, 2);
         status.AutoSize=true; status.Text=warning ?? (settings.Enabled ? "Enabled" : "Disabled");
-        panel.Controls.Add(status, 0, 11); panel.SetColumnSpan(status, 2);
+        panel.Controls.Add(status, 0, 12); panel.SetColumnSpan(status, 2);
         lastButton.AutoSize=true; lastButton.Text="Last side button: none";
-        panel.Controls.Add(lastButton, 0, 12); panel.SetColumnSpan(lastButton, 2);
-        panel.RowCount=13;
+        panel.Controls.Add(lastButton, 0, 13); panel.SetColumnSpan(lastButton, 2);
+        panel.RowCount=14;
         var menu=new ContextMenuStrip();
         menu.Items.Add("Open", null, (_, _) => { Show(); WindowState=FormWindowState.Normal; Activate(); });
         menu.Items.Add("Enable / Disable", null, (_, _) => { enabled.Checked=!settings.Enabled; Save(); });
@@ -103,7 +105,8 @@ internal sealed class MainForm : Form
         try
         {
             var next=new Settings { Enabled=enabled.Checked, Mouse4=(MacroKind)mouse4.SelectedIndex, Mouse5=(MacroKind)mouse5.SelectedIndex,
-                TargetX=(int)x.Value, TargetY=(int)y.Value, DownUpMs=(int)downUp.Value, BetweenClicksMs=(int)between.Value, SuppressButtons=suppress.Checked };
+                TargetX=(int)x.Value, TargetY=(int)y.Value, DownUpMs=(int)downUp.Value, BetweenClicksMs=(int)between.Value,
+                ClicksPerCycle=(int)clicks.Value, SuppressButtons=suppress.Checked };
             next.Validate(); SettingsStore.Save(next); settings=next; engine.Apply(next);
             status.Text="Settings saved. " + (next.Enabled ? "Enabled" : "Disabled");
         }
